@@ -1,0 +1,97 @@
+name: multica
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ghcr.io/multica-ai/multica-backend:sha-18fa9f7
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/data/uploads
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      PORT: "8080"
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      MULTICA_APP_URL: ${MULTICA_APP_URL}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_REGION: ${S3_REGION}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN}
+      CLOUDFRONT_KEY_PAIR_ID: ${CLOUDFRONT_KEY_PAIR_ID}
+      CLOUDFRONT_PRIVATE_KEY: ${CLOUDFRONT_PRIVATE_KEY}
+
+  frontend:
+    image: ghcr.io/multica-ai/multica-web:sha-18fa9f7
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      HOSTNAME: "0.0.0.0"
+
+  code-server-init:
+    image: codercom/code-server:4.121.0
+    restart: "no"
+    user: "1000:1000"
+    volumes:
+      - code-server-home:/home/coder
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        mkdir -p /home/coder/.local/bin /home/coder/.omp
+        if ! command -v omp >/dev/null 2>&1 && [ ! -f /home/coder/.local/bin/omp ] && [ ! -f /home/coder/.local/bin/pi ]; then
+          echo "[init] Installing Oh-My-Pi..."
+          curl -fsSL https://omp.sh/install | sh
+          echo "[init] Oh-My-Pi installed successfully."
+        else
+          echo "[init] Oh-My-Pi is already installed."
+        fi
+
+  # Login with daemon ``$ multica login --token mul_TOKEN``
+  code-server:
+    image: codercom/code-server:4.121.0
+    restart: unless-stopped
+    depends_on:
+      code-server-init:
+        condition: service_completed_successfully
+    #expose:
+    #  - 8080
+    volumes:
+      - code-server-home:/home/coder
+      - .env:/home/coder/.omp/.env
+    environment:
+      - PASSWORD=${CODE_SERVER_PASSWORD}
+      - TZ=${TZ}
+      - PATH=/home/coder/.local/bin:${PATH}
+      - LM_STUDIO_API_KEY=${LM_STUDIO_API_KEY}
+      - LM_STUDIO_BASE_URL=${LM_STUDIO_BASE_URL}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    user: "1000:1000"
+
+volumes:
+  pgdata:
+  backend_uploads:
+  code-server-home:
