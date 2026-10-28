@@ -71,8 +71,15 @@ services:
         else
           echo "[init] Oh-My-Pi is already installed."
         fi
+        if ! command -v hermes >/dev/null 2>&1 && [ ! -f /home/coder/.local/bin/hermes ]; then
+          echo "[init] Installing Hermes Agent..."
+          curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+          echo "[init] Hermes Agent installed successfully."
+        else
+          echo "[init] Hermes Agent is already installed."
+        fi
 
-  # Login with daemon ``$ multica login --token mul_TOKEN``
+  # Install Multica CLI and login with daemon ``$ multica login --token mul_TOKEN``
   code-server:
     image: codercom/code-server:4.121.0
     restart: unless-stopped
@@ -84,12 +91,18 @@ services:
     volumes:
       - code-server-home:/home/coder
       - .env:/home/coder/.omp/.env
+      - .env:/home/coder/.hermes/.env
     environment:
       - PASSWORD=${CODE_SERVER_PASSWORD}
       - TZ=${TZ}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - LM_STUDIO_API_KEY=${LM_STUDIO_API_KEY}
       - LM_STUDIO_BASE_URL=${LM_STUDIO_BASE_URL}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      # for Hermes Agent
+      - LM_BASE_URL=${LM_STUDIO_BASE_URL}
+      - LM_API_KEY=${LM_STUDIO_API_KEY}
+      - HERMES_HOME=/home/coder/.hermes
+      
     user: "1000:1000"
 
 volumes:
