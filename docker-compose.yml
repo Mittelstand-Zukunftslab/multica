@@ -46,6 +46,8 @@ services:
   frontend:
     image: ghcr.io/multica-ai/multica-web:sha-18fa9f7
     restart: unless-stopped
+    ports:
+      - 3000:3000
     depends_on:
       - backend
     environment:
@@ -77,15 +79,14 @@ services:
     depends_on:
       code-server-init:
         condition: service_completed_successfully
-    #expose:
-    #  - 8080
+    ports:
+      - 8080:8080
     volumes:
       - code-server-home:/home/coder
       - .env:/home/coder/.omp/.env
     environment:
       - PASSWORD=${CODE_SERVER_PASSWORD}
       - TZ=${TZ}
-      - PATH=/home/coder/.local/bin:${PATH}
       - LM_STUDIO_API_KEY=${LM_STUDIO_API_KEY}
       - LM_STUDIO_BASE_URL=${LM_STUDIO_BASE_URL}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}

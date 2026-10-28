@@ -136,7 +136,6 @@ docker compose ps
 | `GOOGLE_CLIENT_ID` | OAuth 2.0 Client ID from Google Cloud Console |
 | `GOOGLE_CLIENT_SECRET` | OAuth 2.0 Client Secret from Google Cloud Console |
 | `GOOGLE_REDIRECT_URI` | Authorized redirect URI (e.g. `https://multica.example.com/api/auth/callback/google`) |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID`| Client ID exposed to the frontend app for client-side sign-in flows |
 
 ### Transactional Email (Resend)
 
