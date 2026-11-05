@@ -11,7 +11,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -46,13 +46,11 @@ services:
   frontend:
     image: ghcr.io/multica-ai/multica-web:sha-18fa9f7
     restart: unless-stopped
-    ports:
-      - 3000:3000
     depends_on:
       - backend
     environment:
       HOSTNAME: "0.0.0.0"
-
+  
   code-server-init:
     image: codercom/code-server:4.121.0
     restart: "no"
@@ -60,6 +58,10 @@ services:
     volumes:
       - code-server-home:/home/coder
     entrypoint: ["/bin/bash", "-c"]
+    environment: 
+      - HERMES_HOME=/home/coder/.hermes
+      - MULTICA_API_KEY=${MULTICA_API_KEY:-}
+      - MULTICA_APP_URL=${MULTICA_APP_URL:-}
     command:
       - |
         set -e
@@ -78,6 +80,14 @@ services:
         else
           echo "[init] Hermes Agent is already installed."
         fi
+        if [ -n "${MULTICA_API_KEY}" ] && [ -n "${MULTICA_APP_URL}" ]; then
+        if ! command -v multica >/dev/null 2>&1; then
+          curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash
+        fi
+        multica config set server_url "${MULTICA_APP_URL}"
+        multica config set app_url "${MULTICA_APP_URL}"
+        multica login --token "${MULTICA_API_KEY}"
+        fi
 
   # Install Multica CLI and login with daemon ``$ multica login --token mul_TOKEN``
   code-server:
@@ -86,8 +96,6 @@ services:
     depends_on:
       code-server-init:
         condition: service_completed_successfully
-    ports:
-      - 8080:8080
     volumes:
       - code-server-home:/home/coder
       - .env:/home/coder/.omp/.env
@@ -101,9 +109,9 @@ services:
       # for Hermes Agent
       - LM_BASE_URL=${LM_STUDIO_BASE_URL}
       - LM_API_KEY=${LM_STUDIO_API_KEY}
-      - HERMES_HOME=/home/coder/.hermes
-      
+      - HERMES_HOME=/home/coder/.hermes      
     user: "1000:1000"
+
 
 volumes:
   pgdata:
